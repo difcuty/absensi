@@ -4,6 +4,7 @@ import { Home, BookOpen, TrendingUp, FileText, Settings, X, Camera } from 'lucid
 import { motion, AnimatePresence } from 'framer-motion';
 import { Html5Qrcode } from 'html5-qrcode';
 import { getProfile } from '../../services/authServices';
+import { submitAbsensi } from '../../services/absensiService';
 
 // Import Ikon/Gambar
 import notifIcon from '../../assets/img/notifikasi.svg';
@@ -50,6 +51,7 @@ export default function DashboardPage() {
   }, [navigate]);
 
   // 2. Logika Kamera (Html5Qrcode)
+// 2. Logika Kamera (Html5Qrcode) - VERSI FINAL
   useEffect(() => {
     if (isScannerOpen) {
       scannerRef.current = new Html5Qrcode("reader");
@@ -63,10 +65,21 @@ export default function DashboardPage() {
               qrbox: { width: 250, height: 250 },
               aspectRatio: 1.0 
             },
-            (decodedText) => {
-              // Aksi setelah berhasil scan
-              alert("Absensi Berhasil: " + decodedText);
-              handleCloseScanner();
+            async (decodedText) => {
+              try {
+                // 1. Ubah teks QR menjadi objek data
+                const qrData = JSON.parse(decodedText);
+                
+                // 2. Kirim data ke backend untuk disimpan di database
+                await handleProsesAbsensi(qrData);
+                
+                // 3. Tutup scanner setelah sukses
+                handleCloseScanner();
+              } catch (err) {
+                // Jika QR yang di-scan bukan format JSON (bukan dari dosen)
+                alert("QR Code tidak valid atau format salah.");
+                handleCloseScanner();
+              }
             },
             () => {} 
           );
@@ -87,9 +100,31 @@ export default function DashboardPage() {
     };
   }, [isScannerOpen]);
 
+  // --- LETAKKAN DI SINI (DI LUAR USEEFFECT) ---
+  const handleProsesAbsensi = async (qrData) => {
+    try {
+      // Panggil service
+      const result = await submitAbsensi({
+        nim: user?.npm,
+        id_jadwal: qrData.id_jadwal,
+        pertemuan: qrData.pertemuan,
+        qr_timestamp: qrData.timestamp 
+      });
+
+      if (result.success) {
+        alert(`Absensi Berhasil! Status: ${result.status}`);
+      } else {
+        alert("Gagal Absen: " + result.message);
+      }
+    } catch (error) {
+      console.error("Error submit absen:", error);
+      alert("Terjadi kesalahan koneksi ke server.");
+    }
+  };
   const handleCloseScanner = () => {
     setIsScannerOpen(false);
   };
+
 
   if (loading) return (
     <div className="flex h-screen flex-col items-center justify-center bg-gray-50">

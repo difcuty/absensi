@@ -50,7 +50,7 @@ export default function TinjauanIzin() {
             </div>
 
             {/* TABS */}
-            <div className="bg-white p-4 flex justify-center shadow-sm max-w-4xl mx-auto sticky top-29 z-10">
+            <div className="bg-white p-4 flex justify-center shadow-sm max-w-4xl mx-auto sticky top-29http://localhost:3000/ z-10">
                 {['menunggu', 'diterima', 'ditolak'].map((tab) => (
                     <button
                         key={tab}
