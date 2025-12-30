@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, BookOpen, TrendingUp, FileText, Settings } from 'lucide-react';
 import { submitIzin, getMatkulByData } from '../../services/izinService';
 import arrowLeft from '../../assets/img/Arrow - Left.png';
@@ -7,52 +7,47 @@ import arrowLeft from '../../assets/img/Arrow - Left.png';
 export default function IzinPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [jenisIzin, setJenisIzin] = useState('SAKIT');
+  const [jenisIzin, setJenisIzin] = useState('SAKIT'); // Akan masuk ke kolom 'status'
   const [fileName, setFileName] = useState('');
-  const [listMatkul, setListMatkul] = useState([]);
+  const [listJadwal, setListJadwal] = useState([]);
   const [selectedDosen, setSelectedDosen] = useState(''); 
   
   const [formData, setFormData] = useState({
-    tanggal_izin: new Date().toISOString().split("T")[0],
-    mata_kuliah: '',
-    nidn_dosen: '', 
-    alasan: '',
+    id_jadwal: '', // FK ke tabel jadwal
+    pertemuan: '', // Kolom pertemuan di tabel absensi
+    alasan: '',    // Akan masuk ke kolom 'keterangan'
     surat_izin: null
   });
 
-  // 1. Load Data Matkul
+  // 1. Load Data Jadwal Berdasarkan Semester Profil Mahasiswa
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
-    if (!user || !user.npm) {
-      alert("Silakan login ulang.");
+    if (!user || !user.semester) {
+      alert("Sesi berakhir atau profil tidak lengkap. Silakan login ulang.");
       navigate('/login');
       return;
     }
 
-    const fetchMatkul = async () => {
+    const fetchJadwal = async () => {
       try {
-        const data = await getMatkulByData(user.jurusan, user.semester);
-        setListMatkul(data);
+        // Mengambil jadwal (backend akan mengonversi angka ke Romawi)
+        const data = await getMatkulByData(user.semester);
+        setListJadwal(data);
       } catch (err) {
-        console.error(err.message);
-        // Data Dummy
-        setListMatkul([
-          { nama_matkul: "Praktik RPL", nama_dosen: "Budi M.Kom", nidn: "12345" },
-          { nama_matkul: "Basis Data", nama_dosen: "Siti M.T", nidn: "67890" }
-        ]);
+        console.error("Gagal mengambil jadwal:", err.message);
+        setListJadwal([]); // Set kosong jika error agar map tidak crash
       }
     };
-    fetchMatkul();
+    fetchJadwal();
   }, [navigate]);
 
-  const handleMatkulChange = (e) => {
-    const matkulNama = e.target.value;
-    const found = listMatkul.find(item => item.nama_matkul === matkulNama);
+  const handleJadwalChange = (e) => {
+    const idJadwal = e.target.value;
+    const found = listJadwal.find(item => item.id_jadwal.toString() === idJadwal);
     
     setFormData({ 
       ...formData, 
-      mata_kuliah: matkulNama,
-      nidn_dosen: found ? found.nidn : '' 
+      id_jadwal: idJadwal 
     });
     setSelectedDosen(found ? found.nama_dosen : '');
   };
@@ -60,6 +55,11 @@ export default function IzinPage() {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validasi ukuran file (Max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File terlalu besar! Maksimal 2MB.");
+        return;
+      }
       setFormData({ ...formData, surat_izin: file });
       setFileName(file.name);
     }
@@ -69,34 +69,49 @@ export default function IzinPage() {
     e.preventDefault();
     const user = JSON.parse(localStorage.getItem("user"));
 
-    if (!formData.mata_kuliah) return alert("Pilih mata kuliah!");
+    // 1. Validasi Keberadaan User & ID
+    if (!user || (!user.id_mhs && !user.id)) {
+      return alert("Sesi login tidak valid. Silakan login ulang.");
+    }
+
+    // 2. Validasi Input Form
+    if (!formData.id_jadwal) return alert("Pilih mata kuliah!");
+    if (!formData.pertemuan) return alert("Pilih pertemuan!");
+    if (!formData.surat_izin) return alert("Wajib mengunggah bukti dukung (PDF/JPG)!");
 
     const data = new FormData();
-    data.append("npm", user.npm);
-    data.append("jenis_izin", jenisIzin);
-    data.append("tanggal_izin", formData.tanggal_izin);
-    data.append("mata_kuliah", formData.mata_kuliah);
-    data.append("nidn", formData.nidn_dosen);
-    data.append("alasan", formData.alasan);
-    if (formData.surat_izin) data.append("surat_izin", formData.surat_izin);
+    
+    // 3. Mapping data ke FormData (Harus sesuai dengan req.body di Controller)
+    // Gunakan user.id_mhs atau user.id (sesuai field di localStorage Anda)
+    const mhsId = user.id_mhs || user.id;
+    
+    data.append("id_mhs", mhsId);
+    data.append("id_jadwal", formData.id_jadwal);
+    // Simpan pertemuan sebagai string (misal: "8") atau "Pertemuan 8"
+    data.append("pertemuan", formData.pertemuan); 
+    data.append("status", jenisIzin); // 'SAKIT' atau 'IZIN'
+    data.append("keterangan", formData.alasan);
+    
+    // File upload (key "surat_izin" harus sama dengan multer di backend)
+    data.append("surat_izin", formData.surat_izin);
 
     try {
       setLoading(true);
       await submitIzin(data);
-      alert("Pengajuan izin berhasil terkirim ke Dosen!");
+      alert("✅ Pengajuan izin berhasil terkirim!");
       navigate('/dashboard');
     } catch (err) {
-      alert(err.message);
+      console.error("Error submit:", err);
+      alert(err.response?.data?.message || "Gagal mengirim izin. Periksa koneksi atau data Anda.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-32"> {/* Tambah padding bottom agar tidak tertutup footer */}
-      {/* HEADER */}
+    <div className="bg-gray-50 min-h-screen pb-32">
       <header className="bg-white shadow-sm p-4 flex items-center sticky top-0 z-50">
-        <button onClick={() => navigate('/dashboard')} className="w-6 h-6 mr-4 outline-none">
+        <button onClick={() => navigate('/dashboard')} className="w-6 h-6 mr-4 outline-none hover:opacity-70 transition-opacity">
           <img src={arrowLeft} alt="Kembali" className="w-full h-full object-contain" />
         </button>
         <h1 className="text-lg font-black text-gray-800 uppercase tracking-tight">Pengajuan Izin</h1>
@@ -104,86 +119,104 @@ export default function IzinPage() {
 
       <main className="p-4 max-w-md mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* JENIS IZIN */}
+          
+          {/* KATEGORI */}
           <div>
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Jenis Ketidakhadiran</label>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Kategori Absen</label>
             <div className="grid grid-cols-2 gap-4 mt-2">
-              <button type="button" onClick={() => setJenisIzin('SAKIT')}
-                className={`py-4 rounded-2xl font-black transition-all text-sm ${jenisIzin === 'SAKIT' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105' : 'bg-white border border-gray-100 text-gray-400'}`}>
-                SAKIT
-              </button>
-              <button type="button" onClick={() => setJenisIzin('IZIN')}
-                className={`py-4 rounded-2xl font-black transition-all text-sm ${jenisIzin === 'IZIN' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105' : 'bg-white border border-gray-100 text-gray-400'}`}>
-                IZIN
-              </button>
+              {['SAKIT', 'IZIN'].map((item) => (
+                <button 
+                  key={item}
+                  type="button" 
+                  onClick={() => setJenisIzin(item)}
+                  className={`py-4 rounded-2xl font-black transition-all text-sm ${jenisIzin === item ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105' : 'bg-white border border-gray-100 text-gray-400'}`}>
+                  {item}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* PILIH MATKUL */}
+          {/* MATKUL */}
           <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mata Kuliah</label>
             <select
-              name="mata_kuliah"
-              value={formData.mata_kuliah}
-              onChange={handleMatkulChange}
+              value={formData.id_jadwal}
+              onChange={handleJadwalChange}
               required
               className="w-full mt-2 p-3 bg-gray-50 border-none rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 text-sm appearance-none"
             >
               <option value="">-- Pilih Mata Kuliah --</option>
-              {listMatkul.map((mk, i) => (
-                <option key={i} value={mk.nama_matkul}>{mk.nama_matkul}</option>
+              {listJadwal.map((j) => (
+                <option key={j.id_jadwal} value={j.id_jadwal}>
+                  {j.nama_mk} - {j.kelas}
+                </option>
               ))}
             </select>
             
-            {/* INFO DOSEN */}
-            <div className={`mt-4 pt-4 border-t border-dashed border-gray-200 transition-all duration-300 ${selectedDosen ? 'opacity-100 block' : 'opacity-0 hidden'}`}>
-              <p className="text-[10px] font-black text-gray-400 uppercase">Dosen Pengampu</p>
-              <p className="text-sm font-extrabold text-blue-600 mt-1">{selectedDosen}</p>
-            </div>
+            {selectedDosen && (
+              <div className="mt-4 pt-4 border-t border-dashed border-gray-200 animate-pulse">
+                <p className="text-[10px] font-black text-gray-400 uppercase">Dosen Pengampu</p>
+                <p className="text-sm font-extrabold text-blue-600 mt-1">{selectedDosen}</p>
+              </div>
+            )}
           </div>
 
-          {/* TANGGAL & ALASAN */}
+          {/* PERTEMUAN & ALASAN */}
           <div className="space-y-4">
             <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Tanggal Absen</label>
-                <input type="date" name="tanggal_izin" value={formData.tanggal_izin} onChange={(e) => setFormData({...formData, tanggal_izin: e.target.value})}
-                className="w-full mt-2 p-4 bg-white border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800" required />
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Pertemuan Ke-</label>
+              <select 
+                value={formData.pertemuan} 
+                onChange={(e) => setFormData({...formData, pertemuan: e.target.value})}
+                className="w-full mt-2 p-4 bg-white border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800" 
+                required
+              >
+                <option value="">-- Pilih Pertemuan --</option>
+                {[...Array(16)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>Pertemuan {i + 1}</option>
+                ))}
+              </select>
             </div>
             
             <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Keterangan Alasan</label>
-                <textarea name="alasan" rows="3" value={formData.alasan} onChange={(e) => setFormData({...formData, alasan: e.target.value})}
-                placeholder="Tulis alasan Anda..." className="w-full mt-2 p-4 bg-white border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800" required />
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Alasan Detail</label>
+              <textarea 
+                rows="3" 
+                value={formData.alasan} 
+                onChange={(e) => setFormData({...formData, alasan: e.target.value})}
+                placeholder="Berikan alasan yang jelas..." 
+                className="w-full mt-2 p-4 bg-white border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800" 
+                required 
+              />
             </div>
           </div>
 
-          {/* FILE UPLOAD */}
+          {/* UPLOAD FILE */}
           <div>
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Bukti Dukung (PDF/JPG)</label>
-            <label className="mt-2 flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-200 rounded-3xl cursor-pointer bg-white hover:bg-blue-50 transition-colors group">
-              <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-blue-100 transition-colors">
-                <FileText className="text-blue-600 w-6 h-6" />
+            <label className={`mt-2 flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-3xl cursor-pointer bg-white transition-all group ${fileName ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-blue-50'}`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors ${fileName ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600'}`}>
+                <FileText size={24} />
               </div>
-              <span className="text-gray-500 font-bold text-xs">{fileName || "Unggah Surat Izin / Bukti"}</span>
-              <p className="text-[9px] text-gray-400 mt-1 uppercase font-black">Maksimal 2MB</p>
-              <input type="file" onChange={handleFileChange} className="hidden" />
+              <span className={`font-bold text-xs text-center ${fileName ? 'text-blue-700' : 'text-gray-500'}`}>
+                {fileName || "Klik untuk unggah Bukti"}
+              </span>
+              <input type="file" onChange={handleFileChange} className="hidden" accept="image/*,application/pdf" />
             </label>
           </div>
 
           <button type="submit" disabled={loading}
-            className="w-full py-5 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-black text-lg rounded-[2rem] shadow-xl shadow-blue-100 hover:shadow-2xl active:scale-95 disabled:opacity-50 transition-all uppercase tracking-widest">
+            className="w-full py-5 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-black text-lg rounded-4xl shadow-xl shadow-blue-100 hover:shadow-2xl active:scale-95 disabled:opacity-50 transition-all uppercase tracking-widest">
             {loading ? "MENGIRIM..." : "KIRIM SEKARANG"}
           </button>
         </form>
       </main>
 
-      {/* FOOTER NAV */}
       <BottomNav />
     </div>
   );
 }
 
-// Sub-komponen Bottom Navigation (Konsisten dengan Dashboard)
 function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -194,19 +227,15 @@ function BottomNav() {
       <button onClick={() => navigate('/dashboard')} className={`${isActive('/dashboard') ? 'text-blue-600 scale-110' : 'text-gray-300'} transition-all`}>
         <Home size={24} strokeWidth={isActive('/dashboard') ? 3 : 2} />
       </button>
-      
       <button onClick={() => navigate('/jadwal-kuliah')} className={`${isActive('/jadwal-kuliah') ? 'text-blue-600 scale-110' : 'text-gray-300'} transition-all`}>
         <BookOpen size={24} strokeWidth={isActive('/jadwal-kuliah') ? 3 : 2} />
       </button>
-
       <button className="text-gray-300 hover:text-blue-600 transition-all">
         <TrendingUp size={24} strokeWidth={2} />
       </button>
-      
       <button onClick={() => navigate('/izin')} className={`${isActive('/izin') ? 'text-blue-600 scale-110' : 'text-gray-300'} transition-all`}>
         <FileText size={24} strokeWidth={isActive('/izin') ? 3 : 2} />
       </button>
-      
       <button onClick={() => navigate('/profil')} className={`${isActive('/profil') ? 'text-blue-600 scale-110' : 'text-gray-300'} transition-all`}>
         <Settings size={24} strokeWidth={isActive('/profil') ? 3 : 2} />
       </button>

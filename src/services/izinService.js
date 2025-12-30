@@ -1,28 +1,36 @@
 import axios from 'axios';
 
-// PERBAIKAN: Gunakan BASE URL saja (tanpa /izin di ujungnya agar fleksibel)
+// Jika VITE_API_URL Anda bernilai "http://localhost:3000"
 const API_URL = import.meta.env.VITE_API_URL; 
 
-// Ambil daftar matkul berdasarkan jurusan & semester mahasiswa
-export const getMatkulByData = async (jurusan, semester) => {
+/**
+ * 1. Ambil daftar matakuliah berdasarkan Jadwal & Semester
+ */
+export const getMatkulByData = async (semester) => {
     try {
-        const response = await axios.get(`${API_URL}/izin/matakuliah/${jurusan}/${semester}`);
+        // Penambahan /api secara manual sebelum /izin
+        const response = await axios.get(`${API_URL}/api/izin/matakuliah/${semester}`);
         return response.data; 
     } catch (error) {
-        throw error.response?.data || { message: "Gagal mengambil data mata kuliah" };
+        console.error("Service Error - getMatkulByData:", error);
+        throw error.response?.data || { message: "Gagal mengambil data jadwal mata kuliah" };
     }
 };
 
-// Submit Form Izin (Multipart/Form-Data)
+/**
+ * 2. Submit Form Izin (Multipart/Form-Data)
+ */
 export const submitIzin = async (formData) => {
     try {
-        const response = await axios.post(`${API_URL}/izin`, formData, {
+        // Penambahan /api secara manual sebelum /izin
+        const response = await axios.post(`${API_URL}/api/izin`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
         });
         return response.data;
     } catch (error) {
-        throw error.response?.data || { message: "Gagal mengirim izin" };
+        console.error("Service Error - submitIzin:", error);
+        throw error.response?.data || { message: "Gagal mengirim pengajuan izin" };
     }
 };

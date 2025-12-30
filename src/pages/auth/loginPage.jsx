@@ -24,38 +24,52 @@ export default function LoginPage() {
       // 1. Panggil API Login
       const result = await loginUser(email, password);
       
-      // 2. AMBIL DATA & NORMALISASI (Ini kuncinya!)
-      // Kita pastikan data yang masuk ke LocalStorage selalu rapi
-      const rawData = result.data || result; 
+      /**
+       * 2. AMBIL DATA & NORMALISASI
+       * Kita mengambil userData dari result.data.data 
+       * (Menyesuaikan standar Axios dan format res.json({ data: userData }) di backend)
+       */
+      const userData = result.data?.data || result.data || result; 
       
+      if (!userData) {
+        throw new Error("Data user tidak ditemukan dalam respon server");
+      }
+
+      // 3. MEMBERSIHKAN SESI LAMA
+      // Sangat penting untuk menghapus sisa data login sebelumnya agar tidak bentrok
+      localStorage.clear();
+
+      /**
+       * 4. SPREAD OPERATOR (...)
+       * Ini bagian terpenting. Dengan menggunakan ...userData, 
+       * semua kolom dari MySQL (termasuk id_mhs yang Auto Increment) 
+       * akan otomatis masuk ke objek cleanUser tanpa harus ditulis satu-satu.
+       */
       const cleanUser = {
-        ...rawData,
-        // Paksa role jadi UPPERCASE dan hapus spasi (mencegah "" atau "mahasiswa")
-        role: (rawData.role || rawData.Role || "MAHASISWA").toUpperCase().trim(),
-        // Pastikan field pendukung mahasiswa tetap ada agar fitur filter matkul tidak error
-        jurusan: rawData.jurusan || "",
-        semester: rawData.semester || ""
+        ...userData,
+        role: (userData.role || "MAHASISWA").toUpperCase().trim(),
       };
 
-      // 3. Simpan data yang sudah "bersih"
+      // 5. SIMPAN KE LOCALSTORAGE
       localStorage.setItem("user", JSON.stringify(cleanUser));
-      console.log("Login sukses, data tersimpan:", cleanUser);
+      
+      // DEBUG: Cek di console (F12) apakah id_mhs sudah muncul setelah copas kode ini
+      console.log("Login sukses! Data tersimpan:", cleanUser);
 
-      alert(result.message || "Login Berhasil");
-
-      // 4. NAVIGASI BERDASARKAN ROLE
-      if (cleanUser.role === 'ADMIN') {
+      // 6. NAVIGASI BERDASARKAN ROLE
+      const role = cleanUser.role;
+      if (role === 'ADMIN') {
         navigate('/admin');
-      } else if (cleanUser.role === 'DOSEN') {
+      } else if (role === 'DOSEN') {
         navigate('/dosen');
       } else {
-        // Default untuk MAHASISWA
         navigate('/dashboard');
       }
 
     } catch (err) {
-      console.error("Login error:", err);
-      alert(err.message || "Email atau Password salah");
+      console.error("Login error detail:", err);
+      const errorMessage = err.response?.data?.message || err.message || "Email atau Password salah";
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +84,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit}>
           <div className="flex flex-col justify-center gap-2">
             <input 
-              className="border rounded-[5px] p-3 border-[#635C5C]" 
+              className="border rounded-[5px] p-3 border-[#635C5C] outline-none focus:ring-2 focus:ring-blue-400" 
               type="email" 
               placeholder="Email" 
               value={email}
@@ -79,7 +93,7 @@ export default function LoginPage() {
             />
 
             <input 
-              className="border border-[#635C5C] rounded-[5px] p-3" 
+              className="border border-[#635C5C] rounded-[5px] p-3 outline-none focus:ring-2 focus:ring-blue-400" 
               type="password" 
               placeholder="Password"
               value={password}
@@ -88,16 +102,18 @@ export default function LoginPage() {
             />
 
             <div className="flex justify-between text-sm text-[#635C5C]">
-              <label className="flex items-center">
+              <label className="flex items-center cursor-pointer">
                 <input className="mr-2" type="checkbox" /> remember me
               </label>
-              <div className="cursor-pointer">Forgot Password?</div>
+              <div className="cursor-pointer hover:text-blue-500">Forgot Password?</div>
             </div>
 
             <button 
               type="submit" 
               disabled={isLoading}
-              className={`bg-[#0B6EFE] text-white font-bold rounded-[5px] p-3 mt-2 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`bg-[#0B6EFE] text-white font-bold rounded-[5px] p-3 mt-2 transition-all active:scale-95 ${
+                isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+              }`}
             >
               {isLoading ? 'Processing...' : 'Login'}
             </button>
@@ -107,7 +123,7 @@ export default function LoginPage() {
         <div className="text-center text-sm text-[#000000] mt-4 mb-4">
           Don't have an account?  
           <Link to="/register">
-            <span className="text-[#4C84FF] ml-1 font-bold">Sign Up</span>
+            <span className="text-[#4C84FF] ml-1 font-bold hover:underline">Sign Up</span>
           </Link>
         </div> 
       </div>
