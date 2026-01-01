@@ -1,21 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, BookOpen, TrendingUp, FileText, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { FileText } from 'lucide-react';
 import { submitIzin, getMatkulByData } from '../../services/izinService';
+
+// --- IMPORT BOTTOMNAV DARI KOMPONEN PUSAT ---
+import BottomNav from '../../components/BottomNav';
+
 import arrowLeft from '../../assets/img/Arrow - Left.png';
 
 export default function IzinPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [jenisIzin, setJenisIzin] = useState('SAKIT'); // Akan masuk ke kolom 'status'
+  const [jenisIzin, setJenisIzin] = useState('SAKIT'); 
   const [fileName, setFileName] = useState('');
   const [listJadwal, setListJadwal] = useState([]);
   const [selectedDosen, setSelectedDosen] = useState(''); 
   
   const [formData, setFormData] = useState({
-    id_jadwal: '', // FK ke tabel jadwal
-    pertemuan: '', // Kolom pertemuan di tabel absensi
-    alasan: '',    // Akan masuk ke kolom 'keterangan'
+    id_jadwal: '', 
+    pertemuan: '', 
+    alasan: '',    
     surat_izin: null
   });
 
@@ -30,12 +34,11 @@ export default function IzinPage() {
 
     const fetchJadwal = async () => {
       try {
-        // Mengambil jadwal (backend akan mengonversi angka ke Romawi)
         const data = await getMatkulByData(user.semester);
         setListJadwal(data);
       } catch (err) {
         console.error("Gagal mengambil jadwal:", err.message);
-        setListJadwal([]); // Set kosong jika error agar map tidak crash
+        setListJadwal([]); 
       }
     };
     fetchJadwal();
@@ -55,7 +58,6 @@ export default function IzinPage() {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validasi ukuran file (Max 2MB)
       if (file.size > 2 * 1024 * 1024) {
         alert("File terlalu besar! Maksimal 2MB.");
         return;
@@ -69,30 +71,22 @@ export default function IzinPage() {
     e.preventDefault();
     const user = JSON.parse(localStorage.getItem("user"));
 
-    // 1. Validasi Keberadaan User & ID
     if (!user || (!user.id_mhs && !user.id)) {
       return alert("Sesi login tidak valid. Silakan login ulang.");
     }
 
-    // 2. Validasi Input Form
     if (!formData.id_jadwal) return alert("Pilih mata kuliah!");
     if (!formData.pertemuan) return alert("Pilih pertemuan!");
     if (!formData.surat_izin) return alert("Wajib mengunggah bukti dukung (PDF/JPG)!");
 
     const data = new FormData();
-    
-    // 3. Mapping data ke FormData (Harus sesuai dengan req.body di Controller)
-    // Gunakan user.id_mhs atau user.id (sesuai field di localStorage Anda)
     const mhsId = user.id_mhs || user.id;
     
     data.append("id_mhs", mhsId);
     data.append("id_jadwal", formData.id_jadwal);
-    // Simpan pertemuan sebagai string (misal: "8") atau "Pertemuan 8"
     data.append("pertemuan", formData.pertemuan); 
-    data.append("status", jenisIzin); // 'SAKIT' atau 'IZIN'
+    data.append("status", jenisIzin); 
     data.append("keterangan", formData.alasan);
-    
-    // File upload (key "surat_izin" harus sama dengan multer di backend)
     data.append("surat_izin", formData.surat_izin);
 
     try {
@@ -102,7 +96,7 @@ export default function IzinPage() {
       navigate('/dashboard');
     } catch (err) {
       console.error("Error submit:", err);
-      alert(err.response?.data?.message || "Gagal mengirim izin. Periksa koneksi atau data Anda.");
+      alert(err.response?.data?.message || "Gagal mengirim izin.");
     } finally {
       setLoading(false);
     }
@@ -212,33 +206,8 @@ export default function IzinPage() {
         </form>
       </main>
 
+      {/* --- PANGGIL KOMPONEN BOTTOMNAV EKSTERNAL --- */}
       <BottomNav />
     </div>
-  );
-}
-
-function BottomNav() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const isActive = (path) => location.pathname === path;
-
-  return (
-    <nav className="fixed bottom-0 max-w-md w-full bg-white border-t border-gray-100 px-8 py-4 flex justify-between items-center z-50 rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.06)] left-1/2 -translate-x-1/2">
-      <button onClick={() => navigate('/dashboard')} className={`${isActive('/dashboard') ? 'text-blue-600 scale-110' : 'text-gray-300'} transition-all`}>
-        <Home size={24} strokeWidth={isActive('/dashboard') ? 3 : 2} />
-      </button>
-      <button onClick={() => navigate('/jadwal-kuliah')} className={`${isActive('/jadwal-kuliah') ? 'text-blue-600 scale-110' : 'text-gray-300'} transition-all`}>
-        <BookOpen size={24} strokeWidth={isActive('/jadwal-kuliah') ? 3 : 2} />
-      </button>
-      <button className="text-gray-300 hover:text-blue-600 transition-all">
-        <TrendingUp size={24} strokeWidth={2} />
-      </button>
-      <button onClick={() => navigate('/izin')} className={`${isActive('/izin') ? 'text-blue-600 scale-110' : 'text-gray-300'} transition-all`}>
-        <FileText size={24} strokeWidth={isActive('/izin') ? 3 : 2} />
-      </button>
-      <button onClick={() => navigate('/profil')} className={`${isActive('/profil') ? 'text-blue-600 scale-110' : 'text-gray-300'} transition-all`}>
-        <Settings size={24} strokeWidth={isActive('/profil') ? 3 : 2} />
-      </button>
-    </nav>
   );
 }

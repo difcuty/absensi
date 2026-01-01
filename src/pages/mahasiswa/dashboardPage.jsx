@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Home, BookOpen, TrendingUp, FileText, Settings, X, Camera, CheckCircle2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { X, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Html5Qrcode } from 'html5-qrcode';
 import * as faceapi from 'face-api.js';
@@ -8,6 +8,9 @@ import * as faceapi from 'face-api.js';
 import { getProfile } from '../../services/authServices';
 import { submitAbsensi } from '../../services/absensiService';
 import { useFaceAI } from '../../hooks/useFaceAI'; 
+
+// Import Footer Komponen Pusat
+import BottomNav from '../../components/BottomNav';
 
 import notifIcon from '../../assets/img/notifikasi.svg';
 import qrIcon from '../../assets/img/qr.svg';
@@ -19,7 +22,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isModelsLoaded, setIsModelsLoaded] = useState(false); // State baru untuk cek model
+  const [isModelsLoaded, setIsModelsLoaded] = useState(false); 
   
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isFaceVerifyOpen, setIsFaceVerifyOpen] = useState(false);
@@ -30,7 +33,7 @@ export default function DashboardPage() {
   const videoRef = useRef(null);
   const { detectFace, stopCamera: stopFaceCam } = useFaceAI();
 
-  // 1. Load Face AI Models (PENTING: Memperbaiki Error Load Model)
+  // 1. Load Face AI Models
   useEffect(() => {
     const loadModels = async () => {
       try {
@@ -41,7 +44,6 @@ export default function DashboardPage() {
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
         ]);
         setIsModelsLoaded(true);
-        console.log("Face-AI Models Loaded");
       } catch (err) {
         console.error("Gagal load model:", err);
       }
@@ -110,7 +112,7 @@ export default function DashboardPage() {
     };
   }, [isScannerOpen]);
 
-  // 4. Kamera Wajah Stream (Agar kamera tidak hitam)
+  // 4. Kamera Wajah Stream
   useEffect(() => {
     let stream = null;
     const enableFaceCamera = async () => {
@@ -131,7 +133,7 @@ export default function DashboardPage() {
     };
   }, [isFaceVerifyOpen]);
 
-  // 5. Logika Verifikasi Wajah (Dengan proteksi model)
+  // 5. Logika Verifikasi Wajah
   const handleVerifyFace = async () => {
     if (!isModelsLoaded) return alert("Sistem AI sedang bersiap, tunggu sebentar...");
     if (!user?.face_descriptor) return alert("Wajah belum terdaftar.");
@@ -313,12 +315,13 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
 
+      {/* Panggil Footer Komponen */}
       <BottomNav />
     </div>
   );
 }
 
-// Sub Komponen Tetap Sama
+// Sub Komponen Card Menu
 function MenuCard({ icon, label, to }) {
   return (
     <Link to={to} className="flex flex-col items-center p-5 bg-white rounded-2xl shadow-sm border border-gray-50 active:scale-95 transition-all text-decoration-none">
@@ -327,20 +330,5 @@ function MenuCard({ icon, label, to }) {
       </div>
       <span className="text-[10px] font-black text-gray-500 uppercase text-center tracking-tighter">{label}</span>
     </Link>
-  );
-}
-
-function BottomNav() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const isActive = (path) => location.pathname === path;
-  return (
-    <nav className="fixed bottom-0 max-w-md w-full bg-white border-t border-gray-100 px-8 py-4 flex justify-between items-center z-50 rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.06)] left-1/2 -translate-x-1/2">
-      <button onClick={() => navigate('/dashboard')} className={`${isActive('/dashboard') ? 'text-blue-600 scale-110' : 'text-gray-300'} transition-all`}><Home size={24} strokeWidth={isActive('/dashboard') ? 3 : 2} /></button>
-      <button onClick={() => navigate('/jadwal-kuliah')} className={`${isActive('/jadwal-kuliah') ? 'text-blue-600 scale-110' : 'text-gray-300'} transition-all`}><BookOpen size={24} strokeWidth={isActive('/jadwal-kuliah') ? 3 : 2} /></button>
-      <button className="text-gray-300 transition-all"><TrendingUp size={24} strokeWidth={2} /></button>
-      <button onClick={() => navigate('/izin')} className={`${isActive('/izin') ? 'text-blue-600 scale-110' : 'text-gray-300'} transition-all`}><FileText size={24} strokeWidth={isActive('/izin') ? 3 : 2} /></button>
-      <button onClick={() => navigate('/profil')} className={`${isActive('/profil') ? 'text-blue-600 scale-110' : 'text-gray-300'} transition-all`}><Settings size={24} strokeWidth={isActive('/profil') ? 3 : 2} /></button>
-    </nav>
   );
 }

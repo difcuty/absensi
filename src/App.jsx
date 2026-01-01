@@ -8,6 +8,7 @@ import DashboardPage from './pages/mahasiswa/dashboardPage';
 import EditProfilePage from './pages/mahasiswa/EditProfilePage'; 
 import IzinPage from './pages/mahasiswa/izinPage';
 import JadwalMahasiswa from './pages/mahasiswa/jadwalMhsPage';
+import RiwayatPage from './pages/mahasiswa/riwayatPage'; // Pastikan path dan nama file sesuai
 
 // Admin Pages
 import AdminDashboard from './pages/admin/adminDashboardPage';
@@ -59,6 +60,7 @@ function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/izin" element={<IzinPage />} />
         <Route path="/jadwal-kuliah" element={<JadwalMahasiswa />} />
+        <Route path="/riwayat" element={<RiwayatPage />} />
       </Route>
 
       {/* RUTE ADMIN */}

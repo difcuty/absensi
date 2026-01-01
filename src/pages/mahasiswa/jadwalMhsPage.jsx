@@ -1,18 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  ChevronLeft, 
-  Home, 
-  BookOpen, 
-  TrendingUp, 
-  FileText, 
-  Settings 
-} from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getJadwal, getDosen } from '../../services/akademikService';
 
+// --- IMPORT BOTTOMNAV DARI KOMPONEN PUSAT ---
+import BottomNav from '../../components/BottomNav';
+
 const DAFTAR_HARI = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
-// Mapping untuk menyesuaikan input user dengan data di Database
 const MAP_JURUSAN = {
   'ti': 'TEKNIK INFORMATIKA S-1',
   'si': 'SISTEM INFORMASI S-1',
@@ -26,34 +21,27 @@ export default function JadwalMahasiswa() {
   const [dosenList, setDosenList] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Ambil data user dari localStorage
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      
-      // Ambil data secara paralel
       const [resJadwal, resDosen] = await Promise.all([getJadwal(), getDosen()]);
       
-      // Pastikan res adalah array (menangani jika API membungkus dalam { data: [] })
       const allDosen = Array.isArray(resDosen) ? resDosen : (resDosen?.data || []);
       const allJadwal = Array.isArray(resJadwal) ? resJadwal : (resJadwal?.data || []);
       
       setDosenList(allDosen);
 
-      // Normalisasi Jurusan
       const kodeJurusanUser = (user.jurusan || "").toLowerCase();
       const namaJurusanLengkap = MAP_JURUSAN[kodeJurusanUser] || kodeJurusanUser.toUpperCase();
 
-      // Logika Filter yang diperketat dengan .trim() dan .toUpperCase()
       const filtered = allJadwal.filter(item => {
         const matchJurusan = String(item.jurusan || '').trim().toUpperCase() === namaJurusanLengkap.trim().toUpperCase();
         const matchHari = String(item.hari || '').trim().toUpperCase() === selectedHari.toUpperCase();
         return matchJurusan && matchHari;
       });
 
-      // Urutkan berdasarkan jam
       const sorted = filtered.sort((a, b) => (String(a.jam) > String(b.jam) ? 1 : -1));
       setJadwal(sorted);
 
@@ -82,7 +70,7 @@ export default function JadwalMahasiswa() {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-gray-50 min-h-screen flex flex-col font-sans text-gray-800 shadow-xl relative pb-24">
+    <div className="max-w-md mx-auto bg-gray-50 min-h-screen flex flex-col font-sans text-gray-800 shadow-xl relative pb-28">
       
       {/* HEADER NAV */}
       <div className="sticky top-0 z-50 shadow-sm bg-white">
@@ -90,10 +78,11 @@ export default function JadwalMahasiswa() {
           <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-gray-50 rounded-full transition-colors">
             <ChevronLeft size={24} className="text-gray-600" />
           </button>
-          <h2 className="font-bold text-base text-gray-800">Jadwal Kuliah</h2>
+          <h2 className="font-bold text-base text-gray-800 uppercase tracking-tight">Jadwal Kuliah</h2>
           <div className="w-10"></div>
         </div>
 
+        {/* TAB HARI */}
         <div className="p-3 flex gap-2 overflow-x-auto no-scrollbar border-b border-gray-100 bg-white">
           {DAFTAR_HARI.map((hari) => (
             <button
@@ -133,11 +122,10 @@ export default function JadwalMahasiswa() {
         ) : jadwal.length > 0 ? (
           <div className="space-y-4">
             {jadwal.map((item, index) => {
-              // SINKRONISASI FIELD: Gunakan kode_dosen bukan dsn_kode
               const dosen = dosenList.find(d => String(d.kode_dosen) === String(item.kode_dosen));
               
               return (
-                <div key={item.id_jadwal || index} className="bg-white rounded-2xl shadow-sm border-l-4 border-blue-600 p-4 hover:shadow-md transition-all group">
+                <div key={item.id_jadwal || index} className="bg-white rounded-2xl shadow-sm border-l-4 border-blue-600 p-4 hover:shadow-md transition-all group active:scale-[0.98]">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-blue-600 text-[11px] font-black italic tracking-tight">
                       {formatJam(item.jam)}
@@ -152,7 +140,6 @@ export default function JadwalMahasiswa() {
                     </div>
                   </div>
                   
-                  {/* SINKRONISASI FIELD: Gunakan nama_mk atau kode_mk */}
                   <h4 className="text-[14px] font-extrabold text-gray-900 leading-tight mb-3 uppercase">
                     {item.nama_mk || item.kode_mk || 'Mata Kuliah'}
                   </h4>
@@ -186,14 +173,8 @@ export default function JadwalMahasiswa() {
         )}
       </main>
 
-      {/* FOOTER NAV */}
-      <nav className="fixed bottom-0 max-w-md w-full bg-white border-t border-gray-100 px-8 py-4 flex justify-between items-center z-50 rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.06)]">
-        <button onClick={() => navigate('/dashboard')} className="text-gray-300 hover:text-blue-600 transition-all"><Home size={24} /></button>
-        <button className="text-blue-600 scale-125 transition-all"><BookOpen size={24} /></button>
-        <button className="text-gray-300 hover:text-blue-600 transition-all"><TrendingUp size={24} /></button>
-        <button onClick={() => navigate('/izin')} className="text-gray-300 hover:text-blue-600 transition-all"><FileText size={24} /></button>
-        <button onClick={() => navigate('/profil')} className="text-gray-300 hover:text-blue-600 transition-all"><Settings size={24} /></button>
-      </nav>
+      {/* --- PANGGIL KOMPONEN BOTTOMNAV --- */}
+      <BottomNav />
 
     </div>
   );
