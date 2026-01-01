@@ -35,6 +35,7 @@ const DosenDashboard = () => {
 
       const profile = await getProfilDosen(identifier);
       setUserData(profile);
+      console.log("Kode Dosen ditemukan:", profile.kode_dosen);
 
       // Ambil Izin & Jadwal secara paralel
       const [totalIzin, daftarJadwal] = await Promise.all([
@@ -156,17 +157,17 @@ const DosenDashboard = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-              <h3 className="text-xs font-bold text-gray-400 uppercase mb-2">Izin Baru</h3>
-              <p className="text-4xl font-black text-gray-800">{jumlahIzin}</p>
+            <div className="flex flex-col items-center px-16 bg-white rounded-2xl shadow-sm border border-gray-100 gap-3 p-5">
+              <h3 className=" text-2xl font-black text-gray-800 uppercase mb-2">Izin Baru</h3>
+              <p className="text-lg  text-gray-400">{jumlahIzin} permintaan menunggu</p>
               <button className="mt-4 w-full py-2 border-2 border-blue-600 text-blue-600 rounded-xl font-bold text-xs uppercase hover:bg-blue-600 hover:text-white transition">
-                Tinjau
+                Tinjau Semua Izin
               </button>
             </div>
             
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center">
-              <h3 className="text-xs font-bold text-gray-400 uppercase mb-2">Kehadiran</h3>
-              <p className="text-4xl font-black text-blue-600">92%</p>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center gap-3">
+              <h3 className="text-2xl font-black text-gray-800 uppercase mb-2">Kehadiran</h3>
+              <p className="text-4xl font-black text-black">92%</p>
               <div className="w-full bg-gray-100 rounded-full h-1.5 mt-4">
                 <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: '92%' }}></div>
               </div>
