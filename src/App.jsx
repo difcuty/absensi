@@ -18,6 +18,7 @@ import AkademikPage from './pages/admin/akademikPage'; // <--- TAMBAHKAN INI
 // Dosen Pages
 import DosenDashboard from './pages/dosen/dashboardDosen';
 import TinjauanIzin from './pages/dosen/tinjauIzin';
+import RekapKehadiran from './pages/dosen/kehadiranPage';
 
 /**
  * Komponen ProtectedRoute
@@ -75,6 +76,7 @@ function App() {
       <Route element={<ProtectedRoute allowedRoles={['DOSEN']} />}>
         <Route path="/dosen" element={<DosenDashboard />} />
         <Route path="/dosen/tinjau-izin" element={<TinjauanIzin />} />
+        <Route path="/dosen/rekap-kehadiran" element={<RekapKehadiran />} />
       </Route>
 
       {/* RUTE BERSAMA */}

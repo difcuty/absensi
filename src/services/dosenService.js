@@ -3,28 +3,65 @@
  * Menangani komunikasi antara Frontend Dashboard Dosen dan API Backend
  */
 
-// 1. Konfigurasi Base URL
 const RAW_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const CLEAN_BASE = RAW_BASE.endsWith('/') ? RAW_BASE.slice(0, -1) : RAW_BASE;
-const API_BASE_URL = `${CLEAN_BASE}/api/dosen`;
+
+// API BASE untuk profil & jadwal tetap di /api/dosen
+const API_DOSEN = `${CLEAN_BASE}/api/dosen`;
+
+// API BASE untuk izin (disesuaikan dengan izinRoutes.js Anda)
+const API_IZIN = `${CLEAN_BASE}/api/izin`;
 
 /**
- * 2. Mengambil jumlah izin mahasiswa yang statusnya 'pending'
- * Difilter berdasarkan mata kuliah yang diampu oleh dosen terkait
+ * 1. Mengambil data profil lengkap dosen
+ */
+export const getProfilDosen = async (identifier) => {
+    try {
+        if (!identifier) throw new Error("Identifier diperlukan");
+        const res = await fetch(`${API_DOSEN}/profil/${identifier}`);
+        if (!res.ok) throw new Error("Gagal mengambil data profil");
+        const result = await res.json();
+        return result.data;
+    } catch (err) {
+        console.error("Service Error (getProfilDosen):", err.message);
+        throw err;
+    }
+};
+
+/**
+ * 2. Mengambil daftar jadwal mengajar dosen
+ */
+export const getJadwalDosen = async (kodeDosen) => {
+    try {
+        if (!kodeDosen) return [];
+        const res = await fetch(`${API_DOSEN}/jadwal?kode_dosen=${kodeDosen}`);
+        if (!res.ok) throw new Error("Gagal memuat jadwal");
+        const result = await res.json();
+        return result.success ? (result.data || []) : [];
+    } catch (err) {
+        console.error("Service Error (getJadwalDosen):", err.message);
+        return [];
+    }
+};
+
+/**
+ * 3. Mengambil jumlah izin mahasiswa yang statusnya 'pending'
+ * URL disesuaikan dengan izinRoutes yang baru
  */
 export const getPendingIzinCount = async (kodeDosen) => {
     try {
         if (!kodeDosen) return 0;
-
-        const url = `${API_BASE_URL}/izin-count?kode_dosen=${kodeDosen}`;
-        const res = await fetch(url);
-        
+        // Kita gunakan endpoint list-dosen tapi hitung jumlah yang 'menunggu'
+        const res = await fetch(`${API_IZIN}/list-dosen?kode_dosen=${kodeDosen}`);
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        
         const result = await res.json();
         
-        // SINKRONISASI: Mengambil properti 'count' dari backend
-        return result.success ? (result.count || 0) : 0;
+        if (result.success) {
+            // Filter hanya yang statusnya 'menunggu' (sesuai tab frontend) atau 'PENDING'
+            const pending = result.data.filter(i => i.status.toLowerCase() === 'pending' || i.status.toLowerCase() === 'menunggu');
+            return pending.length;
+        }
+        return 0;
     } catch (err) {
         console.error("Service Error (getPendingIzinCount):", err.message);
         return 0;
@@ -32,48 +69,51 @@ export const getPendingIzinCount = async (kodeDosen) => {
 };
 
 /**
- * 3. Mengambil data profil lengkap dosen
- * @param {string} identifier - Bisa berupa email atau kode_dosen
+ * 4. Mengambil daftar detail izin mahasiswa
+ * URL: /api/izin/list-dosen (Sesuai rute router.get("/list-dosen", ...))
  */
-export const getProfilDosen = async (identifier) => {
+export const getIzinByDosen = async (kodeDosen) => {
     try {
-        if (!identifier) throw new Error("Identifier (email/kode) diperlukan");
-
-        const url = `${API_BASE_URL}/profil/${identifier}`;
-        console.log("Fetching Profil from:", url);
-
-        const res = await fetch(url);
-        
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.message || "Gagal mengambil data profil");
-        }
-
+        if (!kodeDosen) return [];
+        const res = await fetch(`${API_IZIN}/list-dosen?kode_dosen=${kodeDosen}`);
+        if (!res.ok) throw new Error("Gagal mengambil daftar izin");
         const result = await res.json();
-        return result.data; // Mengembalikan objek profil {nama, nidn, foto_url, dll}
+        
+        // Normalisasi status dari 'Verified/Rejected' ke 'diterima/ditolak' agar sesuai Tab UI
+        if (result.success && result.data) {
+            return result.data.map(item => ({
+                ...item,
+                status: item.status === 'Verified' ? 'diterima' : 
+                        item.status === 'Rejected' ? 'ditolak' : 'menunggu'
+            }));
+        }
+        return [];
     } catch (err) {
-        console.error("Service Error (getProfilDosen):", err.message);
-        throw err; // Dilempar agar UI bisa menampilkan pesan error jika perlu
+        console.error("Service Error (getIzinByDosen):", err.message);
+        return [];
     }
 };
 
 /**
- * 4. Mengambil daftar jadwal mengajar dosen
- * Digunakan untuk setup absensi QR dan list jadwal di dashboard
+ * 5. Memperbarui status izin
+ * URL: /api/izin/status-update (Sesuai rute router.post("/status-update", ...))
  */
-export const getJadwalDosen = async (kodeDosen) => {
+export const updateStatusIzin = async (idIzin, status) => {
     try {
-        if (!kodeDosen) return [];
-
-        const url = `${API_BASE_URL}/jadwal?kode_dosen=${kodeDosen}`;
-        const res = await fetch(url);
-        
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const res = await fetch(`${API_IZIN}/status-update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id_izin: idIzin,
+                status: status // status dikirim sebagai 'diterima' atau 'ditolak'
+            }),
+        });
 
         const result = await res.json();
-        return result.success ? (result.data || []) : [];
+        if (!res.ok) throw new Error(result.message || "Gagal update status");
+        return result;
     } catch (err) {
-        console.error("Service Error (getJadwalDosen):", err.message);
-        return [];
+        console.error("Service Error (updateStatusIzin):", err.message);
+        throw err;
     }
 };

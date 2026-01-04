@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Home, List, BarChart2, FileText, Settings, QrCode, ExternalLink, X, ChevronRight } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+// Import useNavigate untuk navigasi antar halaman
+import { useNavigate } from 'react-router-dom';
 // Import fungsi service (pastikan path service Anda benar)
 import { getPendingIzinCount, getProfilDosen, getJadwalDosen } from '../../services/dosenService';
 
 const DosenDashboard = () => {
+  const navigate = useNavigate(); // Inisialisasi navigasi
+  
   // State Data
   const [jumlahIzin, setJumlahIzin] = useState(0);
   const [userData, setUserData] = useState(null);
@@ -102,7 +106,10 @@ const DosenDashboard = () => {
               </p>
             </div>
           </div>
-          <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition">
+          <button 
+            onClick={() => navigate('/dosen/tinjauan-izin')} // Shortcut dari Bell icon
+            className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition"
+          >
             <Bell size={24} />
             {jumlahIzin > 0 && (
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
@@ -157,10 +164,13 @@ const DosenDashboard = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="flex flex-col items-center px-16 bg-white rounded-2xl shadow-sm border border-gray-100 gap-3 p-5">
+            <div className="flex flex-col items-center px-4 bg-white rounded-2xl shadow-sm border border-gray-100 gap-3 p-5">
               <h3 className=" text-2xl font-black text-gray-800 uppercase mb-2">Izin Baru</h3>
-              <p className="text-lg  text-gray-400">{jumlahIzin} permintaan menunggu</p>
-              <button className="mt-4 w-full py-2 border-2 border-blue-600 text-blue-600 rounded-xl font-bold text-xs uppercase hover:bg-blue-600 hover:text-white transition">
+              <p className="text-sm text-center text-gray-400">{jumlahIzin} permintaan menunggu</p>
+              <button 
+                onClick={() => navigate('/dosen/tinjau-izin')} // Navigasi ke halaman Izin
+                className="mt-4 w-full py-2 border-2 border-blue-600 text-blue-600 rounded-xl font-bold text-xs uppercase hover:bg-blue-600 hover:text-white transition"
+              >
                 Tinjau Semua Izin
               </button>
             </div>
@@ -267,8 +277,8 @@ const DosenDashboard = () => {
       {/* NAVIGASI */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 h-16 lg:hidden z-50">
         <nav className="flex justify-around items-center h-full">
-          <NavItem icon={<Home size={22} />} active />
-          <NavItem icon={<List size={22} />} />
+          <NavItem icon={<Home size={22} />} active onClick={() => navigate('/dosen/dashboard')} />
+          <NavItem icon={<List size={22} />} onClick={() => navigate('/dosen/tinjauan-izin')} />
           <NavItem icon={<BarChart2 size={22} />} />
           <NavItem icon={<FileText size={22} />} />
           <NavItem icon={<Settings size={22} />} />
@@ -285,8 +295,11 @@ const StatRow = ({ label, value, color }) => (
     </div>
 );
 
-const NavItem = ({ icon, active = false }) => (
-    <button className={`flex flex-col items-center justify-center w-full transition ${active ? 'text-blue-600' : 'text-gray-400'}`}>
+const NavItem = ({ icon, active = false, onClick }) => (
+    <button 
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center w-full transition ${active ? 'text-blue-600' : 'text-gray-400'}`}
+    >
       {icon}
       {active && <span className="w-1 h-1 bg-blue-600 rounded-full mt-1"></span>}
     </button>
