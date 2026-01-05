@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginUser } from '../../services/authServices';
 
@@ -8,8 +8,20 @@ import vectorBg from '../../assets/img/Vector.svg';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false); // State baru untuk checkbox
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Efek untuk mengecek data "Remember Me" saat halaman pertama kali dimuat
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    const savedStatus = localStorage.getItem('rememberMeStatus');
+    
+    if (savedStatus === 'true' && savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,33 +36,36 @@ export default function LoginPage() {
       // 1. Panggil API Login
       const result = await loginUser(email, password);
       
-      // 2. AMBIL DATA & NORMALISASI (Ini kuncinya!)
-      // Kita pastikan data yang masuk ke LocalStorage selalu rapi
+      // 2. AMBIL DATA & NORMALISASI
       const rawData = result.data || result; 
       
       const cleanUser = {
         ...rawData,
-        // Paksa role jadi UPPERCASE dan hapus spasi (mencegah "" atau "mahasiswa")
         role: (rawData.role || rawData.Role || "MAHASISWA").toUpperCase().trim(),
-        // Pastikan field pendukung mahasiswa tetap ada agar fitur filter matkul tidak error
         jurusan: rawData.jurusan || "",
         semester: rawData.semester || ""
       };
 
-      // 3. Simpan data yang sudah "bersih"
+      // LOGIKA REMEMBER ME: Simpan atau hapus email berdasarkan checkbox
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email);
+        localStorage.setItem('rememberMeStatus', 'true');
+      } else {
+        localStorage.removeItem('rememberedEmail');
+        localStorage.setItem('rememberMeStatus', 'false');
+      }
+
+      // 3. Simpan data yang sudah "bersih" (Session User)
       localStorage.setItem("user", JSON.stringify(cleanUser));
       console.log("Login sukses, data tersimpan:", cleanUser);
 
-      alert(result.message || "Login Berhasil");
-
       // 4. NAVIGASI BERDASARKAN ROLE
       if (cleanUser.role === 'ADMIN') {
-        navigate('/admin');
+        navigate('/admin', { replace: true });
       } else if (cleanUser.role === 'DOSEN') {
-        navigate('/dosen');
+        navigate('/dosen', { replace: true });
       } else {
-        // Default untuk MAHASISWA
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       }
 
     } catch (err) {
@@ -88,8 +103,13 @@ export default function LoginPage() {
             />
 
             <div className="flex justify-between text-sm text-[#635C5C]">
-              <label className="flex items-center">
-                <input className="mr-2" type="checkbox" /> remember me
+              <label className="flex items-center cursor-pointer">
+                <input 
+                  className="mr-2" 
+                  type="checkbox" 
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                /> remember me
               </label>
               <div className="cursor-pointer">Forgot Password?</div>
             </div>
