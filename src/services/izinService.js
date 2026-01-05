@@ -1,36 +1,49 @@
 import axios from 'axios';
 
-// Jika VITE_API_URL Anda bernilai "http://localhost:3000"
-const API_URL = import.meta.env.VITE_API_URL; 
+// Gunakan fallback ke localhost jika env tidak terbaca
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000"; 
 
 /**
- * 1. Ambil daftar matakuliah berdasarkan Jadwal & Semester
+ * 1. Ambil daftar mata kuliah berdasarkan semester dan kelas
  */
-export const getMatkulByData = async (semester) => {
+export const getMatkulByData = async (semester, kelas) => {
     try {
-        // Penambahan /api secara manual sebelum /izin
-        const response = await axios.get(`${API_URL}/api/izin/matakuliah/${semester}`);
-        return response.data; 
+        const response = await axios.get(`${API_URL}/api/izin/matakuliah/${semester}/${kelas}`);
+        return response.data;
     } catch (error) {
-        console.error("Service Error - getMatkulByData:", error);
-        throw error.response?.data || { message: "Gagal mengambil data jadwal mata kuliah" };
+        console.error("Error getMatkulByData:", error);
+        throw error.response?.data || { message: "Gagal memuat mata kuliah" };
     }
 };
 
 /**
- * 2. Submit Form Izin (Multipart/Form-Data)
+ * 2. Ambil riwayat pertemuan yang sudah diisi (Fungsi Filter)
+ * URL: /api/izin/cek-pertemuan/:id_mhs/:id_jadwal
+ */
+export const getPertemuanTerisi = async (id_mhs, id_jadwal) => {
+    try {
+        const response = await axios.get(`${API_URL}/api/izin/cek-pertemuan/${id_mhs}/${id_jadwal}`);
+        // Pastikan return array kosong jika data tidak ada agar .includes() di frontend tidak error
+        return response.data.data || []; 
+    } catch (error) {
+        console.error("Error getPertemuanTerisi:", error);
+        return []; // Jika error, kembalikan array kosong agar dropdown tetap muncul (tanpa filter)
+    }
+};
+
+/**
+ * 3. Kirim pengajuan izin (Multipart Form Data)
  */
 export const submitIzin = async (formData) => {
     try {
-        // Penambahan /api secara manual sebelum /izin
         const response = await axios.post(`${API_URL}/api/izin`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
+            headers: { 
+                'Content-Type': 'multipart/form-data' 
             }
         });
         return response.data;
     } catch (error) {
-        console.error("Service Error - submitIzin:", error);
+        console.error("Error submitIzin:", error);
         throw error.response?.data || { message: "Gagal mengirim pengajuan izin" };
     }
 };
