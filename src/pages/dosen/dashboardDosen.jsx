@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Home, List, BarChart2, FileText, Settings, QrCode, ExternalLink, X, ChevronRight } from 'lucide-react';
+import { Bell, Home, List, Settings, QrCode, ExternalLink, X, ChevronRight, History } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-// Import useNavigate untuk navigasi antar halaman
 import { useNavigate } from 'react-router-dom';
-// Import fungsi service (pastikan path service Anda benar)
+// Pastikan path service sesuai dengan struktur proyek Anda
 import { getPendingIzinCount, getProfilDosen, getJadwalDosen } from '../../services/dosenService';
 
 const DosenDashboard = () => {
-  const navigate = useNavigate(); // Inisialisasi navigasi
+  const navigate = useNavigate();
   
   // State Data
   const [jumlahIzin, setJumlahIzin] = useState(0);
@@ -15,12 +14,12 @@ const DosenDashboard = () => {
   const [jadwal, setJadwal] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // State Monitoring Kehadiran (Real-time mockup)
-  const [stats, setStats] = useState({ hadir: 0, terlambat: 0, belum: 0 });
+  // State Monitoring Kehadiran (Mockup)
+  const [stats] = useState({ hadir: 0, terlambat: 0, belum: 0 });
 
   // State Modal QR
   const [showModal, setShowModal] = useState(false);
-  const [modalStep, setModalStep] = useState(1); // 1: Pilih MK, 2: Pilih Pertemuan, 3: QR
+  const [modalStep, setModalStep] = useState(1); 
   const [selectedJadwal, setSelectedJadwal] = useState(null);
   const [pertemuan, setPertemuan] = useState("");
   const [qrValue, setQrValue] = useState("");
@@ -39,9 +38,7 @@ const DosenDashboard = () => {
 
       const profile = await getProfilDosen(identifier);
       setUserData(profile);
-      console.log("Kode Dosen ditemukan:", profile.kode_dosen);
 
-      // Ambil Izin & Jadwal secara paralel
       const [totalIzin, daftarJadwal] = await Promise.all([
         getPendingIzinCount(profile.kode_dosen),
         getJadwalDosen(profile.kode_dosen)
@@ -58,15 +55,12 @@ const DosenDashboard = () => {
 
   const handleGenerateQR = () => {
     if (!selectedJadwal || !pertemuan) return;
-    
-    // Data JSON untuk di-scan mahasiswa
     const payload = {
       id_jadwal: selectedJadwal.id_jadwal,
       kode_mk: selectedJadwal.kode_mk,
       pertemuan: pertemuan,
-      timestamp: new Date().toISOString() // Untuk validasi 15 menit di backend
+      timestamp: new Date().toISOString()
     };
-    
     setQrValue(JSON.stringify(payload));
     setModalStep(3);
   };
@@ -79,15 +73,15 @@ const DosenDashboard = () => {
   };
 
   if (loading && !userData) {
-      return (
-          <div className="flex h-screen items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-      );
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
+    <div className="min-h-screen bg-gray-50 pb-24 lg:pb-8">
       {/* HEADER */}
       <header className="bg-white p-4 shadow-sm sticky top-0 z-50">
         <div className="container mx-auto max-w-4xl flex items-center justify-between">
@@ -102,17 +96,17 @@ const DosenDashboard = () => {
             <div>
               <p className="text-sm font-bold text-gray-800">{userData?.nama}</p>
               <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
-                  NIDN: {userData?.nidn || "-"}
+                NIDN: {userData?.nidn || "-"}
               </p>
             </div>
           </div>
           <button 
-            onClick={() => navigate('/dosen/tinjauan-izin')} // Shortcut dari Bell icon
+            onClick={() => navigate('/dosen/tinjauan-izin')}
             className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition"
           >
             <Bell size={24} />
             {jumlahIzin > 0 && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
             )}
           </button>
         </div>
@@ -124,123 +118,148 @@ const DosenDashboard = () => {
           
           <div className="grid lg:grid-cols-2 lg:gap-8 mb-6">
             {/* CARD: SESI AKTIF */}
-            <section className="bg-blue-600 text-white rounded-2xl shadow-lg p-6 relative overflow-hidden">
+            <section className="bg-blue-600 text-white rounded-2xl shadow-lg p-6 relative overflow-hidden flex flex-col justify-between min-h-[220px]">
               <div className="relative z-10">
-                <h2 className="text-blue-100 text-sm font-semibold mb-2 uppercase tracking-widest">Sesi Kelas Saat Ini</h2>
-                <p className="text-3xl font-black mb-1">
-                    {modalStep === 3 ? selectedJadwal?.nama_mk : "Siap Mengajar?"}
+                <h2 className="text-blue-100 text-[10px] font-bold mb-2 uppercase tracking-[0.2em]">Sesi Kelas Saat Ini</h2>
+                <p className="text-2xl font-black mb-1 leading-tight">
+                  {modalStep === 3 ? selectedJadwal?.nama_mk : "Siap Mengajar?"}
                 </p>
-                <p className="text-sm opacity-90">
-                    {modalStep === 3 ? `Pertemuan ${pertemuan} - Kelas ${selectedJadwal?.kelas}` : "Silakan buka sesi absensi"}
+                <p className="text-xs opacity-80 font-medium">
+                  {modalStep === 3 ? `Pertemuan ${pertemuan} • Kelas ${selectedJadwal?.kelas}` : "Silakan aktifkan QR absen untuk memulai kelas"}
                 </p>
-                
-                <div className="flex flex-col items-center mt-8">
-                  <button 
-                    onClick={() => setShowModal(true)}
-                    className="bg-white text-blue-600 font-bold py-3 px-8 rounded-xl shadow-xl hover:bg-blue-50 transition active:scale-95 flex items-center gap-2 w-full justify-center"
-                  >
-                    <QrCode size={20} />
-                    {modalStep === 3 ? "LIHAT QR CODE" : "BUKA SESI & GENERATE QR"}
-                  </button>
-                </div>
               </div>
-              <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-500 rounded-full opacity-50"></div>
+              
+              <button 
+                onClick={() => setShowModal(true)}
+                className="relative z-10 mt-6 bg-white text-blue-600 font-bold py-3.5 px-6 rounded-xl shadow-xl hover:bg-blue-50 transition active:scale-95 flex items-center gap-3 w-full justify-center"
+              >
+                <QrCode size={20} />
+                <span className="text-sm uppercase tracking-wider">{modalStep === 3 ? "LIHAT QR CODE" : "BUKA SESI ABSENSI"}</span>
+              </button>
+              <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-500 rounded-full opacity-30"></div>
             </section>
 
             {/* CARD: MONITORING */}
-            <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between">
+            <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between mt-4 lg:mt-0 min-h-[220px]">
               <div>
-                <h2 className="text-sm font-bold text-gray-400 mb-4 uppercase tracking-widest">Pemantauan Kehadiran</h2>
+                <h2 className="text-[10px] font-bold text-gray-400 mb-4 uppercase tracking-[0.2em]">Pemantauan Real-time</h2>
                 <div className="space-y-4">
                   <StatRow label="Hadir Tepat Waktu" value={stats.hadir} color="text-emerald-600" />
                   <StatRow label="Terlambat" value={stats.terlambat} color="text-orange-500" />
                   <StatRow label="Belum Absen" value={stats.belum} color="text-gray-400" />
                 </div>
               </div>
-              <button className="text-blue-600 text-sm font-bold flex items-center gap-1 hover:underline mt-4">
-                Lihat Detail <ExternalLink size={14} />
+              <button 
+                onClick={() => navigate('/dosen/riwayat-kehadiran')}
+                className="text-blue-600 text-xs font-bold flex items-center gap-1.5 hover:underline mt-4 uppercase tracking-wider"
+              >
+                Analistik Lengkap <ExternalLink size={14} />
               </button>
             </section>
           </div>
 
+          {/* GRID: IZIN & RIWAYAT (HEIGHT FIXED & BALANCED) */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="flex flex-col items-center px-4 bg-white rounded-2xl shadow-sm border border-gray-100 gap-3 p-5">
-              <h3 className=" text-2xl font-black text-gray-800 uppercase mb-2">Izin Baru</h3>
-              <p className="text-sm text-center text-gray-400">{jumlahIzin} permintaan menunggu</p>
+            {/* CARD IZIN */}
+            <div className="flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 p-5 min-h-[220px]">
+              <h3 className="text-xl font-black text-gray-800 uppercase mb-2">Izin</h3>
+              <div className="flex-1 flex flex-col items-center justify-center">
+                 <div className="text-4xl font-black text-blue-600 mb-1">{jumlahIzin}</div>
+                 <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest text-center">Permintaan Baru</p>
+              </div>
               <button 
-                onClick={() => navigate('/dosen/tinjau-izin')} // Navigasi ke halaman Izin
-                className="mt-4 w-full py-2 border-2 border-blue-600 text-blue-600 rounded-xl font-bold text-xs uppercase hover:bg-blue-600 hover:text-white transition"
+                onClick={() => navigate('/dosen/tinjauan-izin')}
+                className="w-full py-3 border-2 border-blue-600 text-blue-600 rounded-xl font-bold text-[10px] uppercase hover:bg-blue-600 hover:text-white transition mt-4"
               >
-                Tinjau Semua Izin
+                Tinjau Semua
               </button>
             </div>
             
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center gap-3">
-              <h3 className="text-2xl font-black text-gray-800 uppercase mb-2">Kehadiran</h3>
-              <p className="text-4xl font-black text-black">92%</p>
-              <div className="w-full bg-gray-100 rounded-full h-1.5 mt-4">
-                <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: '92%' }}></div>
+            {/* CARD RIWAYAT */}
+            <div className="flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 p-5 min-h-[220px]">
+              <h3 className="text-xl font-black text-gray-800 uppercase mb-2">Riwayat</h3>
+              <div className="flex-1 flex flex-col items-center justify-center">
+                <div className="bg-blue-50 p-3 rounded-2xl text-blue-600 mb-2">
+                  <History size={28} />
+                </div>
+                <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest text-center">Log Kehadiran</p>
               </div>
+              <button 
+                onClick={() => navigate('/dosen/riwayat-kehadiran')}
+                className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-[10px] uppercase hover:bg-blue-700 transition flex items-center justify-center gap-1 shadow-md shadow-blue-100 mt-4"
+              >
+                Lihat Data <ChevronRight size={14} />
+              </button>
             </div>
           </div>
         </div>
       </main>
 
-      {/* MODAL OVERLAY (LOGIKA QR) */}
+      {/* MODAL QR LOGIC (SAME AS BEFORE) */}
       {showModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl">
-            <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800 uppercase text-xs tracking-widest">Setup Absensi QR</h3>
-              <button onClick={closeAndResetModal} className="p-1 hover:bg-gray-200 rounded-full"><X size={20}/></button>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-[2rem] overflow-hidden shadow-2xl">
+            <div className="p-5 border-b flex justify-between items-center bg-gray-50/50">
+              <h3 className="font-bold text-gray-800 uppercase text-[10px] tracking-[0.2em]">Setup Absensi QR</h3>
+              <button onClick={closeAndResetModal} className="p-2 hover:bg-gray-200 rounded-full transition"><X size={20}/></button>
             </div>
 
             <div className="p-6">
-              {/* STEP 1: PILIH JADWAL */}
               {modalStep === 1 && (
-                <div className="space-y-3">
-                  <p className="text-xs font-bold text-gray-400 mb-2">Pilih Mata Kuliah Hari Ini:</p>
-                  <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                <div className="space-y-4">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pilih Mata Kuliah:</p>
+                  <div className="max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                     {jadwal.map((j) => (
                       <button 
                         key={j.id_jadwal}
                         onClick={() => { setSelectedJadwal(j); setModalStep(2); }}
-                        className="w-full text-left p-4 rounded-xl border border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition flex justify-between items-center group"
+                        className="w-full text-left p-4 rounded-2xl border border-gray-100 hover:border-blue-500 hover:bg-blue-50/50 transition flex justify-between items-center group"
                       >
                         <div>
                           <p className="font-bold text-gray-800 text-sm">{j.nama_mk}</p>
-                          <p className="text-[10px] text-gray-500 uppercase">Kelas {j.kelas} • {j.hari} {j.jam}</p>
+                          <p className="text-[10px] text-gray-500 uppercase mt-1 font-medium">Kelas {j.kelas} • {j.hari} {j.jam}</p>
                         </div>
-                        <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-500" />
+                        <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-transform group-hover:translate-x-1" />
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* STEP 2: INPUT PERTEMUAN */}
               {modalStep === 2 && (
                 <div className="space-y-6">
-                  <div className="text-center">
-                    <p className="text-sm font-bold text-blue-600">{selectedJadwal?.nama_mk}</p>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Kelas {selectedJadwal?.kelas}</p>
+                  <div className="text-center p-4 bg-blue-50 rounded-2xl">
+                    <p className="text-sm font-bold text-blue-700">{selectedJadwal?.nama_mk}</p>
+                    <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest mt-1">Kelas {selectedJadwal?.kelas}</p>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Input Pertemuan Ke-</label>
-                    <input 
-                      type="number" 
-                      placeholder="Contoh: 1" 
-                      className="w-full p-4 text-center text-2xl font-black bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none"
-                      value={pertemuan}
-                      onChange={(e) => setPertemuan(e.target.value)}
-                    />
+                  
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] block text-center">
+                        Pertemuan Ke-
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                            <button
+                                key={num}
+                                onClick={() => setPertemuan(num.toString())}
+                                className={`py-3.5 rounded-xl font-black transition-all border-2 ${
+                                    pertemuan === num.toString()
+                                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-105'
+                                        : 'bg-white border-gray-100 text-gray-400 hover:border-blue-200'
+                                }`}
+                            >
+                                {num}
+                            </button>
+                        ))}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => setModalStep(1)} className="flex-1 py-3 text-sm font-bold text-gray-400">Kembali</button>
+
+                  <div className="flex gap-3">
+                    <button onClick={() => { setModalStep(1); setPertemuan(""); }} className="flex-1 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Kembali</button>
                     <button 
                       disabled={!pertemuan}
                       onClick={handleGenerateQR}
-                      className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg disabled:bg-gray-200"
+                      className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg disabled:bg-gray-200 transition active:scale-95"
                     >
                       Generate QR
                     </button>
@@ -248,24 +267,23 @@ const DosenDashboard = () => {
                 </div>
               )}
 
-              {/* STEP 3: TAMPIL QR CODE */}
               {modalStep === 3 && (
-                <div className="flex flex-col items-center space-y-6">
-                  <div className="p-6 bg-white border-8 border-blue-50 rounded-[2.5rem] shadow-inner">
-                    <QRCodeSVG value={qrValue} size={200} level="H" includeMargin={true} />
+                <div className="flex flex-col items-center space-y-6 py-2">
+                  <div className="p-5 bg-white border-[12px] border-blue-50 rounded-[3rem] shadow-inner">
+                    <QRCodeSVG value={qrValue} size={220} level="H" includeMargin={true} />
                   </div>
                   <div className="text-center">
                     <p className="font-bold text-gray-800">{selectedJadwal?.nama_mk}</p>
-                    <div className="flex gap-2 mt-1 justify-center">
-                        <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded-md font-bold uppercase">Pertemuan {pertemuan}</span>
-                        <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded-md font-bold uppercase">Kelas {selectedJadwal?.kelas}</span>
+                    <div className="flex gap-2 mt-2 justify-center">
+                        <span className="text-[10px] bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-bold uppercase tracking-wider">Prt. {pertemuan}</span>
+                        <span className="text-[10px] bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full font-bold uppercase tracking-wider">Kls. {selectedJadwal?.kelas}</span>
                     </div>
                   </div>
                   <button 
                     onClick={closeAndResetModal}
-                    className="w-full py-4 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-600 hover:text-white transition"
+                    className="w-full py-4 bg-red-50 text-red-600 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-red-600 hover:text-white transition"
                   >
-                    Tutup Sesi & Selesai
+                    Selesaikan Sesi
                   </button>
                 </div>
               )}
@@ -274,34 +292,35 @@ const DosenDashboard = () => {
         </div>
       )}
 
-      {/* NAVIGASI */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 h-16 lg:hidden z-50">
+      {/* FOOTER NAVIGASI MOBILE */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 h-18 lg:hidden z-50 px-2">
         <nav className="flex justify-around items-center h-full">
-          <NavItem icon={<Home size={22} />} active onClick={() => navigate('/dosen/dashboard')} />
-          <NavItem icon={<List size={22} />} onClick={() => navigate('/dosen/tinjauan-izin')} />
-          <NavItem icon={<BarChart2 size={22} />} />
-          <NavItem icon={<FileText size={22} />} />
-          <NavItem icon={<Settings size={22} />} />
+          <NavItem icon={<Home size={22} />} label="Home" active onClick={() => navigate('/dosen/dashboard')} />
+          <NavItem icon={<History size={22} />} label="Riwayat" onClick={() => navigate('/dosen/riwayat-kehadiran')} />
+          <NavItem icon={<List size={22} />} label="Izin" onClick={() => navigate('/dosen/tinjauan-izin')} />
+          <NavItem icon={<Settings size={22} />} label="Profil" />
         </nav>
       </footer>
     </div>
   );
 };
 
+// Sub-komponen agar kode rapi
 const StatRow = ({ label, value, color }) => (
-    <div className="flex justify-between items-center border-b border-gray-50 pb-2">
-      <span className="text-gray-600 text-sm font-medium">{label}</span>
-      <span className={`font-bold ${color}`}>{value}</span>
+    <div className="flex justify-between items-center border-b border-gray-50 pb-2.5">
+      <span className="text-gray-500 text-xs font-medium">{label}</span>
+      <span className={`font-black text-sm ${color}`}>{value}</span>
     </div>
 );
 
-const NavItem = ({ icon, active = false, onClick }) => (
+const NavItem = ({ icon, label, active = false, onClick }) => (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center justify-center w-full transition ${active ? 'text-blue-600' : 'text-gray-400'}`}
+      className={`flex flex-col items-center justify-center w-full py-2 transition-all ${active ? 'text-blue-600 scale-110' : 'text-gray-400'}`}
     >
       {icon}
-      {active && <span className="w-1 h-1 bg-blue-600 rounded-full mt-1"></span>}
+      <span className="text-[9px] font-bold mt-1 uppercase tracking-tighter">{label}</span>
+      {active && <span className="w-1 h-1 bg-blue-600 rounded-full mt-0.5"></span>}
     </button>
 );
 
